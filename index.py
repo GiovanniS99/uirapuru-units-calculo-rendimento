@@ -1,5 +1,6 @@
 import requests as req
 import json
+import psycopg2
 
 
 def encontrar_chave(dicionario, chave):
@@ -68,3 +69,43 @@ else:
         print("(ERRO) Arquivo não encontrado.")
     except json.JSONDecodeError as e:
         print(f"(ERRO) ao decodificar JSON: {e}")
+
+time_format = '%Y-%m-%d %H:%M:%S'
+
+host = "localhost"
+database = "uirapurudb-dump-prod"
+user = "postgres"
+password = "01042019"
+
+try:
+    # Cria uma conexão com o banco de dados
+    connection = psycopg2.connect(
+        host=host,
+        database=database,
+        user=user,
+        password=password
+    )
+
+    # Cria um cursor para executar a consulta
+    cursor = connection.cursor()
+
+    # Executa a consulta desejada
+    query = """
+    SELECT payload 
+    FROM day_messages dm 
+    WHERE device_id = 1 
+    AND (created_at BETWEEN '2023-06-26' AND '2023-06-27') 
+    ORDER BY created_at DESC
+    """
+
+    cursor.execute(query)
+
+    # Recupera os resultados da consulta
+    results = cursor.fetchall()
+
+    # Fecha o cursor e a conexão com o banco de dados
+    cursor.close()
+    connection.close()
+
+except psycopg2.Error as e:
+    print("Erro ao conectar ao banco de dados:", e)
