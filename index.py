@@ -48,6 +48,16 @@ usf_sat_params = {
     'device_id': 14
 }
 
+usf_buj_params = {
+    'lat': -1.667214,
+    'lon': -48.054720,
+    'area_modulo': 2.578716,
+    'nro_modulos': 612,
+    'eficiencia_modulo': 0.2055,
+    'capacidade': 324.36,
+    'device_id': 0
+}
+
 usf_ana2_params = {
     'lat': -1.340250,
     'lon': -48.368181,
