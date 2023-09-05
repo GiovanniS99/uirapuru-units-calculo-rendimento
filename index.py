@@ -31,8 +31,9 @@ api_headers = {'Accept': 'application/json'}
 usf_ana1_params = {
     'lat': -1.340332,
     'lon': -48.368021,
-    'area_modulo': 2.556048,
+    'area_modulo': 2.012016,
     'nro_modulos': 328,
+    'eficiencia_modulo': 0.1988,
     'capacidade': 131.2,
     'device_id': 1
 }
@@ -42,6 +43,7 @@ usf_sat_params = {
     'lon': -48.126467,
     'area_modulo': 2.556048,
     'nro_modulos': 204,
+    'eficiencia_modulo': 0.215,
     'capacidade': 111.18,
     'device_id': 14
 }
@@ -49,8 +51,9 @@ usf_sat_params = {
 usf_ana2_params = {
     'lat': -1.340250,
     'lon': -48.368181,
-    'area_modulo': 2.556048,
+    'area_modulo': 2.173572,
     'nro_modulos': 228,
+    'eficiencia_modulo': 0.207,
     'capacidade': 102.6,
     'device_id': 3
 }
