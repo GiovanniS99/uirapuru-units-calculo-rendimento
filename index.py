@@ -28,9 +28,36 @@ api_url = 'https://re.jrc.ec.europa.eu/api/v5_2/DRcalc'
 
 api_headers = {'Accept': 'application/json'}
 
+usf_ana1_params = {
+    'lat': -1.340332,
+    'lon': -48.368021,
+    'area_modulo': 2.556048,
+    'nro_modulos': 328,
+    'capacidade': 131.2,
+    'device_id': 1
+}
+
+usf_sat_params = {
+    'lat': -1.071451,
+    'lon': -48.126467,
+    'area_modulo': 2.556048,
+    'nro_modulos': 204,
+    'capacidade': 111.18,
+    'device_id': 14
+}
+
+usf_ana2_params = {
+    'lat': -1.340250,
+    'lon': -48.368181,
+    'area_modulo': 2.556048,
+    'nro_modulos': 228,
+    'capacidade': 102.6,
+    'device_id': 3
+}
+
 api_params = {
-    'lat': -1.1071,
-    'lon': -48.1264,
+    'lat': -1.071451,
+    'lon': -48.126467,
     'month': 9,
     'global': 1,
     'raddatabase': 'PVGIS-SARAH2',
