@@ -266,6 +266,8 @@ media_eficiencia_hora = sum(lista_eficiencia_hora) / len(lista_eficiencia_hora)
 #calcula a eficiencia diaria por meio da produção
 eficiencia_diaria_metodo_2 = max(lista_producao_diaria)*100/(usinas[usina]['capacidade']*(sum(lista_irrad)/1000))
 
+print(f'Dia {dia_para_calculo} ---- cálculos')
+
 print(f'Média de eficiência por hora: {media_eficiencia_hora}%')
 
-print(f'Eficiênica calculada: {eficiencia_diaria_metodo_2}%')
+print(f'Eficiência calculada: {eficiencia_diaria_metodo_2}%')
