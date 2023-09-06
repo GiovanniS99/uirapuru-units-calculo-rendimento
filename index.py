@@ -2,6 +2,10 @@ import requests as req
 import json
 import psycopg2
 
+# POSSIBILIDADES : USF_ANA1, USF_ANA2, USF_BUJ, USF_SAT
+usina = 'USF_ANA1'
+mes = 9
+
 
 def encontrar_chave(dicionario, chave):
     if isinstance(dicionario, dict):  # Verifica se é um dicionário
@@ -20,14 +24,6 @@ def encontrar_chave(dicionario, chave):
     return None  # Retorna None se a chave não for encontrada
 
 
-flag = False  # para nao ficar requisitando da api em todo teste
-
-# formato requerido URL : https://re.jrc.ec.europa.eu/api/v5_2/DRcalc?lat=-1.0714&lon=-48.1264&month=9&global=1&raddatabase=PVGIS-SARAH2&localtime=1&angle=10&aspect=180&showtemperatures=1&outputformat=json
-
-api_url = 'https://re.jrc.ec.europa.eu/api/v5_2/DRcalc'
-
-api_headers = {'Accept': 'application/json'}
-
 usf_ana1_params = {
     'lat': -1.340332,
     'lon': -48.368021,
@@ -35,7 +31,7 @@ usf_ana1_params = {
     'nro_modulos': 328,
     'eficiencia_modulo': 0.1988,
     'capacidade': 131.2,
-    'device_id': 1
+    'azimute': 225
 }
 
 usf_sat_params = {
@@ -45,7 +41,7 @@ usf_sat_params = {
     'nro_modulos': 204,
     'eficiencia_modulo': 0.215,
     'capacidade': 111.18,
-    'device_id': 14
+    'azimute': 180
 }
 
 usf_buj_params = {
@@ -55,7 +51,7 @@ usf_buj_params = {
     'nro_modulos': 612,
     'eficiencia_modulo': 0.2055,
     'capacidade': 324.36,
-    'device_id': 0
+    'azimute': 180
 }
 
 usf_ana2_params = {
@@ -65,13 +61,17 @@ usf_ana2_params = {
     'nro_modulos': 228,
     'eficiencia_modulo': 0.207,
     'capacidade': 102.6,
-    'device_id': 3
+    'device_id': 225
 }
 
+usinas = {'USF_ANA1': usf_ana1_params, 'USF_SAT': usf_sat_params,
+          'USF_BUJ': usf_buj_params, 'USF_ANA2': usf_ana2_params}
+del usf_ana1_params, usf_sat_params, usf_buj_params, usf_ana2_params
+
 api_params = {
-    'lat': -1.071451,
-    'lon': -48.126467,
-    'month': 9,
+    'lat': usinas[usina]['lat'],
+    'lon': usinas[usina]['lon'],
+    'month': mes,
     'global': 1,
     'raddatabase': 'PVGIS-SARAH2',
     'localtime': 1,
@@ -81,41 +81,31 @@ api_params = {
     'outputformat': 'json'
 }
 
-if flag == True:
-    try:
-        res = req.get(api_url, params=api_params, headers=api_headers)
-        res.raise_for_status()
-        json_res = res.json()
-        try:
-            with open("sample.json", "w") as out_file:
-                data = json.dump(json_res, out_file)
-        except Exception as e:
-            print(f"(ERRO) ao processar JSON: {e}")
+# formato requerido URL : https://re.jrc.ec.europa.eu/api/v5_2/DRcalc?lat=-1.0714&lon=-48.1264&month=9&global=1&raddatabase=PVGIS-SARAH2&localtime=1&angle=10&aspect=180&showtemperatures=1&outputformat=json
 
-    except req.exceptions.RequestException as e:
-        raise SystemExit(e)
-else:
+api_url = 'https://re.jrc.ec.europa.eu/api/v5_2/DRcalc'
+
+api_headers = {'Accept': 'application/json'}
+
+try:
+    res = req.get(api_url, params=api_params, headers=api_headers)
+    res.raise_for_status()
+    json_res = res.json()
     try:
-        with open("sample.json", "r") as input_file:
-            json_res = json.load(input_file)
-            lista = encontrar_chave(json_res, 'daily_profile')
-            try:
-                lista_filtrada = [(chave['time'], chave['Gd(i)'])
-                                  for chave in lista]
-                # print(lista_filtrada)
-            except KeyError:
-                print("(ERRO) Algumas chaves não estão presentes nos dicionários.")
-    except FileNotFoundError:
-        print("(ERRO) Arquivo não encontrado.")
-    except json.JSONDecodeError as e:
-        print(f"(ERRO) ao decodificar JSON: {e}")
+        with open("sample.json", "w") as out_file:
+            data = json.dump(json_res, out_file)
+    except Exception as e:
+        print(f"(ERRO) ao processar JSON: {e}")
+
+except req.exceptions.RequestException as e:
+    raise SystemExit(e)
 
 time_format = '%Y-%m-%d %H:%M:%S'
 
 host = "localhost"
 database = "uirapurudb-dump-prod"
 user = "postgres"
-password = "01042019"
+password = "Giogears99"
 
 try:
     # Cria uma conexão com o banco de dados
