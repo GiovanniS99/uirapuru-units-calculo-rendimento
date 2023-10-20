@@ -6,16 +6,16 @@ import json
 
 ################## MEXER APENAS AQUI ###################
 
-# POSSIBILIDADES : USF_ANA1, USF_ANA2, USF_BUJ, USF_SAT
-usina = 'USF_SAT'
+# POSSIBILIDADES : USF-ANA-100421, USF-ANA-171121, USF-BUJ-260922, USF-SAT-100123
+usina = 'USF-SAT-100123'
 
-dia_para_calculo = '2023-09-03'
+dia_para_calculo = '2023-10-18'
 
 # acesso ao banco de dados
-host = "localhost"
-database = "uirapurudb-dump-prod"
-user = "postgres"
-password = "01042019"
+host = "uirapuru-db-prod.c2barfpqidcj.sa-east-1.rds.amazonaws.com"
+database = "uirapurudb"
+user = "techamazon"
+password = "21392996"
 
 ##########################################################
 
@@ -34,6 +34,8 @@ datetime_obj = datetime.strptime(dia_para_calculo, formato_str_dia_do_ano)
 # mes para obter curva de tendencia de irradiancia da api de irradiancia
 mes = datetime_obj.month
 
+# FUNCAO PARA TRATAR INFORMACOES DA API PVGIS
+
 
 def encontrar_chave(dicionario, chave):
     if isinstance(dicionario, dict):  # Verifica se é um dicionário
@@ -51,60 +53,75 @@ def encontrar_chave(dicionario, chave):
                 return resultado
     return None  # Retorna None se a chave não for encontrada
 
+
 # formato requerido URL : https://re.jrc.ec.europa.eu/api/v5_2/DRcalc?lat=-1.0714&lon=-48.1264&month=9&global=1&raddatabase=PVGIS-SARAH2&localtime=1&angle=10&aspect=180&showtemperatures=1&outputformat=json
-
-
 api_url = 'https://re.jrc.ec.europa.eu/api/v5_2/DRcalc'
-
 api_headers = {'Accept': 'application/json'}
 
-usf_ana1_params = {
-    'lat': -1.340332,
-    'lon': -48.368021,
-    'area_modulo': 2.012016,
-    'nro_modulos': 328,
-    'eficiencia_modulo': 0.1988,
-    'capacidade': 131.2,
-    'azimute': 225,
-    'device_id': 1
-}
+# REQUISITAR INFORMACOES DA USINA NO BANCO DE DADOS
+try:
+    # Cria uma conexão com o banco de dados
+    connection = psycopg2.connect(
+        host=host,
+        database=database,
+        user=user,
+        password=password
+    )
 
-usf_sat_params = {
-    'lat': -1.071451,
-    'lon': -48.126467,
-    'area_modulo': 2.556048,
-    'nro_modulos': 204,
-    'eficiencia_modulo': 0.215,
-    'capacidade': 111.18,
-    'azimute': 180,
-    'device_id': 14
-}
+    # Cria um cursor para executar a consulta
+    cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-usf_buj_params = {
-    'lat': -1.667214,
-    'lon': -48.054720,
-    'area_modulo': 2.578716,
-    'nro_modulos': 612,
-    'eficiencia_modulo': 0.2055,
-    'capacidade': 324.36,
-    'azimute': 180,
-    'device_id': 0
-}
+    # Executa a consulta desejada
+    query = """
+    SELECT
+        u.id,
+        d.id AS "device_id",
+        u."name" AS "unidade",
+        u.gps_location AS "coordenadas",
+        u.capacity_kwp AS "capacidade",
+        u.panels AS "quantidade_de_paineis",
+        u.panel_capacity AS "capacidade_painel",
+        u.panel_area AS "area_painel",
+        u.panel_efficiency AS "eficiencia_painel",
+        u.azimute_angle AS "azimute"
+    FROM
+        units u
+    JOIN
+        devices d
+    ON
+        u.id = d.unit_id
+    WHERE
+        u."name" LIKE('%BUJ%')
+        OR u."name" LIKE('%ANA%')
+        OR u."name" LIKE('%SAT%') ORDER BY id;
+    """
+    cursor.execute(query)
 
-usf_ana2_params = {
-    'lat': -1.340250,
-    'lon': -48.368181,
-    'area_modulo': 2.173572,
-    'nro_modulos': 228,
-    'eficiencia_modulo': 0.207,
-    'capacidade': 102.6,
-    'azimute': 225,
-    'device_id': 3
-}
+    # Recupera os resultados da consulta
+    results = cursor.fetchall()
+    # print(results)
+    usinas = {}
+    for linha in results:
+        coordenadas = linha[3].split(', ')
+        usinas[linha[2]] = {
+            'id': linha[0],
+            'device_id': linha[1],
+            'unidade': linha[2],
+            'lat': round(float(coordenadas[0]), 6),
+            'lon': round(float(coordenadas[1]), 6),
+            'capacidade_usina': linha[4],
+            'nro_modulos': linha[5],
+            'capacidade_painel': linha[6],
+            'area_painel': linha[7],
+            'eficiencia_painel': linha[8],
+            'azimute': linha[9]
+        }
 
-usinas = {'USF_ANA1': usf_ana1_params, 'USF_SAT': usf_sat_params,
-          'USF_BUJ': usf_buj_params, 'USF_ANA2': usf_ana2_params}
-del usf_ana1_params, usf_sat_params, usf_buj_params, usf_ana2_params
+    cursor.close()
+    connection.close()
+
+except psycopg2.Error as e:
+    print("Erro ao conectar ao banco de dados:", e)
 
 api_params = {
     'lat': usinas[usina]['lat'],
@@ -119,6 +136,7 @@ api_params = {
     'outputformat': 'json'
 }
 
+# REQUISITAR DA API PVGIS
 try:
     res = req.get(api_url, params=api_params, headers=api_headers)
     res.raise_for_status()
@@ -132,6 +150,7 @@ try:
 except req.exceptions.RequestException as e:
     raise SystemExit(e)
 
+# TRATAR INFO RECEBIDA PELO PVGIS
 lista = encontrar_chave(json_res, 'daily_profile')
 try:
     lista_filtrada = [{'data_hora': datetime.strptime(datetime_obj.strftime('%Y-%m-%d') + ' ' + chave['time'], '%Y-%m-%d %H:%M'), 'irrad': chave['Gb(i)']}
@@ -156,6 +175,7 @@ for dicionario in lista_filtrada:
             break
 del lista, lista_filtrada
 
+# OBTER DADOS DE PRODUCAO DE ENERGIA DO BANCO DE DADOS
 try:
     # Cria uma conexão com o banco de dados
     conexao = psycopg2.connect(
@@ -169,7 +189,7 @@ try:
     cursor = conexao.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
     # Consulta de potencia maxima nas horas do dia
-    query = """
+    query2 = """
     SELECT 
         CAST(MAX(((m.payload::jsonb)->>'pt')::NUMERIC) AS NUMERIC(10,2))  AS "Potência maxima(W)",
         reference_time AS "Hora"
@@ -199,12 +219,14 @@ try:
     ORDER BY reference_time ASC;
     """
 
-    cursor.execute(query, {'meio_intervalo': 5, 'data_inicial': data_inicial.strftime(
+    cursor.execute(query2, {'meio_intervalo': 5, 'data_inicial': data_inicial.strftime(
         formato_str_tempo), 'data_final': data_final.strftime(formato_str_tempo), 'intervalo': 10, 'device_id': usinas[usina]['device_id']})
 
-    lista_potencia_dia = []
     # Recupera os resultados da consulta
     resultados = cursor.fetchall()
+
+    # Resultados convertidos em lista de dicionarios
+    lista_potencia_dia = []
     for linha in resultados:
         dicionario = {'data_hora': 0, 'pot': 0}
         for dado in linha:
@@ -213,21 +235,21 @@ try:
             else:
                 dicionario["pot"] = float(dado)
         lista_potencia_dia.append(dicionario)
-
+        
     # Consulta da produção diária
-    query2 = """
+    query3 = """
     SELECT
 	    CAST(value / 1000 AS NUMERIC(12,3)) AS "producao_diaria(kWh)"
     FROM
 	    energy
     WHERE
 	    device_id = %(device_id)s
-	AND "date" = %(dia)s
+	AND "date"::DATE = %(dia)s
 	AND "period" = 'day';
     """
 
     cursor.execute(
-        query2, {'device_id': usinas[usina]['device_id'], 'dia': dia_para_calculo})
+        query3, {'device_id': usinas[usina]['device_id'], 'dia': dia_para_calculo})
     producao_diaria = cursor.fetchall()
 
     # Fecha o cursor e a conexão com o banco de dados
@@ -237,37 +259,43 @@ try:
 except psycopg2.Error as e:
     print("Erro ao conectar ao banco de dados:", e)
 
+print(len(lista_potencia_dia))
+print(lista_potencia_dia)
+print(len(lista_tendencia_irradiancia_mes))
+print(lista_tendencia_irradiancia_mes)
+
 lista_irrad = []
 lista_eficiencia_hora = []
-if (len(lista_potencia_dia) == len(lista_tendencia_irradiancia_mes)):
-    for item1, item2 in zip(lista_potencia_dia, lista_tendencia_irradiancia_mes):
-        lista_irrad.append(item2['irrad'])
-        if item1['data_hora'] == item2['data_hora']:
-            denominador = item2['irrad']*usinas[usina]['area_modulo'] * \
-                usinas[usina]['nro_modulos']*usinas[usina]['eficiencia_modulo']
-            numerador = 100 * item1['pot']
-            if denominador != 0:
-                eficiencia = float(numerador/denominador)
-            else:
-                eficiencia = 0
-            lista_eficiencia_hora.append(eficiencia)
+# if (len(lista_potencia_dia) == len(lista_tendencia_irradiancia_mes)):
+#     for item1, item2 in zip(lista_potencia_dia, lista_tendencia_irradiancia_mes):
+#         lista_irrad.append(item2['irrad'])
+#         if item1['data_hora'] == item2['data_hora']:
+#             denominador = item2['irrad']*usinas[usina]['area_modulo'] * \
+#                 usinas[usina]['nro_modulos']*usinas[usina]['eficiencia_modulo']
+#             numerador = 100 * item1['pot']
+#             if denominador != 0:
+#                 eficiencia = float(numerador/denominador)
+#             else:
+#                 eficiencia = 0
+#             lista_eficiencia_hora.append(eficiencia)
 
-lista_producao_diaria = []
-for linha in producao_diaria:
-    for conteudo in linha:
-        lista_producao_diaria.append((float(conteudo)))
+# lista_producao_diaria = []
+# for linha in producao_diaria:
+#     for conteudo in linha:
+#         lista_producao_diaria.append((float(conteudo)))
 
-print(lista_producao_diaria)
-print(lista_eficiencia_hora)
+# print(lista_producao_diaria)
+# print(lista_eficiencia_hora)
 
-# calcula a eficiencia diaria como a media das eficiencias por hora
-media_eficiencia_hora = sum(lista_eficiencia_hora) / len(lista_eficiencia_hora)
+# # calcula a eficiencia diaria como a media das eficiencias por hora
+# media_eficiencia_hora = sum(lista_eficiencia_hora) / len(lista_eficiencia_hora)
 
-#calcula a eficiencia diaria por meio da produção
-rendimento = max(lista_producao_diaria)*100/(usinas[usina]['capacidade']*(sum(lista_irrad)/1000))
+# # calcula a eficiencia diaria por meio da produção
+# rendimento = max(lista_producao_diaria)*100 / \
+#     (usinas[usina]['capacidade']*(sum(lista_irrad)/1000))
 
-print(f'Dia {dia_para_calculo} ---- cálculos')
+# print(f'Dia {dia_para_calculo} ---- cálculos')
 
-print(f'Média de eficiência por hora: {media_eficiencia_hora}%')
+# print(f'Média de eficiência por hora: {media_eficiencia_hora}%')
 
-print(f'Rendimento diário calculado: {rendimento}%')
+# print(f'Rendimento diário calculado: {rendimento}%')
