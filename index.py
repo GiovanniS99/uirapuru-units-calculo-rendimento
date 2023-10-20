@@ -4,6 +4,8 @@ import psycopg2.extras
 import requests as req
 import json
 
+print('\n\n####INICIO EXECUCAO#####\n\n\n')
+
 ################## MEXER APENAS AQUI ###################
 
 # POSSIBILIDADES : USF-ANA-100421, USF-ANA-171121, USF-BUJ-260922, USF-SAT-100123
@@ -259,43 +261,70 @@ try:
 except psycopg2.Error as e:
     print("Erro ao conectar ao banco de dados:", e)
 
-print(len(lista_potencia_dia))
-print(lista_potencia_dia)
-print(len(lista_tendencia_irradiancia_mes))
-print(lista_tendencia_irradiancia_mes)
+#  Busca dos valores da lista de potencia do dia
+dict_lista_potencia_dia = {item['data_hora']: item['pot'] for item in lista_potencia_dia}
+
+# Lista de datas que inclue todas as datas de ambas as listas
+datas_lista_tendencia_irradiancia_mes = [item['data_hora'] for item in lista_tendencia_irradiancia_mes]
+datas_lista_potencia_dia = [item['data_hora'] for item in lista_potencia_dia]
+datas_completas = sorted(set(datas_lista_tendencia_irradiancia_mes + datas_lista_potencia_dia))
+
+# Interpolar valores a lista de potencia diaria para as datas ausentes
+valores_interp = []
+for data in datas_completas:
+    if data in datas_lista_tendencia_irradiancia_mes:
+        # Se a data estiver presente na primeira lista, adicione o valor da primeira lista
+        valor_irrad = next(item['irrad'] for item in lista_tendencia_irradiancia_mes if item['data_hora'] == data)
+    else:
+        valor_irrad = 0.0  # Valor zero em 'irrad' para datas ausentes
+
+    if data in datas_lista_potencia_dia:
+        valor_pot = dict_lista_potencia_dia[data]
+    else:
+        valor_pot = 0.0  # Valor zero em 'pot' para datas ausentes
+
+    valores_interp.append({'data_hora': data, 'pot': valor_pot})
+
+del lista_potencia_dia
+lista_potencia_dia = valores_interp
+del valores_interp
 
 lista_irrad = []
 lista_eficiencia_hora = []
-# if (len(lista_potencia_dia) == len(lista_tendencia_irradiancia_mes)):
-#     for item1, item2 in zip(lista_potencia_dia, lista_tendencia_irradiancia_mes):
-#         lista_irrad.append(item2['irrad'])
-#         if item1['data_hora'] == item2['data_hora']:
-#             denominador = item2['irrad']*usinas[usina]['area_modulo'] * \
-#                 usinas[usina]['nro_modulos']*usinas[usina]['eficiencia_modulo']
-#             numerador = 100 * item1['pot']
-#             if denominador != 0:
-#                 eficiencia = float(numerador/denominador)
-#             else:
-#                 eficiencia = 0
-#             lista_eficiencia_hora.append(eficiencia)
 
-# lista_producao_diaria = []
-# for linha in producao_diaria:
-#     for conteudo in linha:
-#         lista_producao_diaria.append((float(conteudo)))
+if (len(lista_potencia_dia) == len(lista_tendencia_irradiancia_mes)):
+    for item1, item2 in zip(lista_potencia_dia, lista_tendencia_irradiancia_mes):
+        lista_irrad.append(item2['irrad'])
+        if item1['data_hora'] == item2['data_hora']:
+            denominador = item2['irrad']*usinas[usina]['area_painel'] * \
+                usinas[usina]['nro_modulos']*usinas[usina]['eficiencia_painel']
+            numerador = 100 * item1['pot']
+            if denominador != 0:
+                eficiencia = float(numerador/denominador)
+            else:
+                eficiencia = 0
+            lista_eficiencia_hora.append(eficiencia)
 
-# print(lista_producao_diaria)
-# print(lista_eficiencia_hora)
+    lista_producao_diaria = []
 
-# # calcula a eficiencia diaria como a media das eficiencias por hora
-# media_eficiencia_hora = sum(lista_eficiencia_hora) / len(lista_eficiencia_hora)
+    for linha in producao_diaria:
+        for conteudo in linha:
+            lista_producao_diaria.append((float(conteudo)))
+    print(f'########## Valores de Interesse ###########\n')
+    print(f'lista de producao diaria: {lista_producao_diaria}')
+    print(f'lista de eficiencia por hora:{lista_eficiencia_hora}\n\n')
 
-# # calcula a eficiencia diaria por meio da produção
-# rendimento = max(lista_producao_diaria)*100 / \
-#     (usinas[usina]['capacidade']*(sum(lista_irrad)/1000))
+    # calcula a eficiencia diaria como a media das eficiencias por hora
+    media_eficiencia_hora = sum(lista_eficiencia_hora) / len(lista_eficiencia_hora)
 
-# print(f'Dia {dia_para_calculo} ---- cálculos')
+    # calcula a eficiencia diaria por meio da produção
+    rendimento = max(lista_producao_diaria)*100 / \
+        (usinas[usina]['capacidade_usina']*(sum(lista_irrad)/1000))
 
-# print(f'Média de eficiência por hora: {media_eficiencia_hora}%')
+    print(f'############ Dia {dia_para_calculo} ---- calculos #############\n')
 
-# print(f'Rendimento diário calculado: {rendimento}%')
+    print(f'Media de eficiencia por hora: {media_eficiencia_hora}%')
+
+    print(f'Rendimento diario calculado: {rendimento}%')
+else:
+    print("Erro")
