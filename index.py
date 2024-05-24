@@ -9,12 +9,12 @@ print('\n\n####INICIO EXECUCAO#####\n\n\n')
 ################## MEXER APENAS AQUI ###################
 
 # POSSIBILIDADES : USF-ANA-100421, USF-ANA-171121, USF-BUJ-260922, USF-SAT-100123
-usina = 'USF-SAT-100123'
+usina = 'USF-ANA-171121'
 
-dia_para_calculo = '2023-10-18'
+dia_para_calculo = '2024-05-10'
 
 # acesso ao banco de dados
-host = "uirapuru-db-prod.c2barfpqidcj.sa-east-1.rds.amazonaws.com"
+host = "uirapuru-db-dev.cwvqlzvx6slj.us-west-2.rds.amazonaws.com"
 database = "uirapurudb"
 user = "techamazon"
 password = "21392996"
@@ -56,7 +56,7 @@ def encontrar_chave(dicionario, chave):
     return None  # Retorna None se a chave não for encontrada
 
 
-# formato requerido URL : https://re.jrc.ec.europa.eu/api/v5_2/DRcalc?lat=-1.0714&lon=-48.1264&month=9&global=1&raddatabase=PVGIS-SARAH2&localtime=1&angle=10&aspect=180&showtemperatures=1&outputformat=json
+# formato requerido URL : https://re.jrc.ec.europa.eu/api/v5_2/DRcalc?lat=-1.340250656065382&lon=-48.36818197471307&month=5&global=1&raddatabase=PVGIS-SARAH2&localtime=1&angle=10&aspect=180&showtemperatures=1&outputformat=json
 api_url = 'https://re.jrc.ec.europa.eu/api/v5_2/DRcalc'
 api_headers = {'Accept': 'application/json'}
 
@@ -109,8 +109,8 @@ try:
             'id': linha[0],
             'device_id': linha[1],
             'unidade': linha[2],
-            'lat': round(float(coordenadas[0]), 6),
-            'lon': round(float(coordenadas[1]), 6),
+            'lat': coordenadas[0],
+            'lon': coordenadas[1],
             'capacidade_usina': linha[4],
             'nro_modulos': linha[5],
             'capacidade_painel': linha[6],
@@ -241,7 +241,7 @@ try:
     # Consulta da produção diária
     query3 = """
     SELECT
-	    CAST(value / 1000 AS NUMERIC(12,3)) AS "producao_diaria(kWh)"
+	    CAST(value / 1000 AS NUMERIC(10,2)) AS "producao_diaria(kWh)"
     FROM
 	    energy
     WHERE
@@ -306,6 +306,8 @@ if (len(lista_potencia_dia) == len(lista_tendencia_irradiancia_mes)):
     # calcula a eficiencia diaria por meio da produção
     rendimento = max(lista_producao_diaria)*100 / \
         (usinas[usina]['capacidade_usina']*(sum(lista_irrad)/1000))
+        
+    print ('Soma de irradiancia: ', sum(lista_irrad))
 
     print(f'############ Dia {dia_para_calculo} ---- calculos #############\n')
 
