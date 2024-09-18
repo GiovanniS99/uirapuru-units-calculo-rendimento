@@ -9,14 +9,14 @@ print('\n\n####INICIO EXECUCAO#####\n\n\n')
 ################## MEXER APENAS AQUI ###################
 
 # POSSIBILIDADES : USF-ANA-100421, USF-ANA-171121, USF-BUJ-260922, USF-SAT-100123
-usina = 'USF-ANA-171121'
+usina = 'USF-ANA-100421'
 
-dia_para_calculo = '2024-05-10'
+dia_para_calculo = '2024-09-03'
 
 # acesso ao banco de dados
-host = "uirapuru-db-dev.cwvqlzvx6slj.us-west-2.rds.amazonaws.com"
-database = "uirapurudb"
-user = "techamazon"
+host = "172.24.163.169"
+database = "uirapurudb_refreshed"
+user = "postgres"
 password = "21392996"
 
 ##########################################################
